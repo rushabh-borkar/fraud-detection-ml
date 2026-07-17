@@ -77,10 +77,26 @@ def predict(transaction: Transaction):
     prob = model.predict_proba(input_df)[:, 1][0]
     is_fraud = int(prob >= threshold)
 
+    # New return with risk tiers
+    if prob < 0.3:
+        risk_tier = "🟢 Low"
+        action = "Normal monitoring"
+    elif prob < 0.5:
+        risk_tier = "🔵 Medium"
+        action = "Enhanced transaction monitoring"
+    elif prob < 0.73:
+        risk_tier = "🟡 High"
+        action = "Investigator alert"
+    else:
+        risk_tier = "🔴 Critical"
+        action = "Immediate escalation"
+
     return {
         "fraud_probability": round(float(prob), 4),
         "is_fraud": is_fraud,
-        "threshold_used": threshold
+        "threshold_used": threshold,
+        "risk_tier": risk_tier,
+        "recommended_action": action
     }
 
 @app.get("/")
