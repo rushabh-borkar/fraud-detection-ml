@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SentinelAI — Fraud Detection</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0f1e;
+    --surface: #0f1629;
+    --surface2: #141d35;
+    --border: #1e2d50;
+    --cyan: #00d4ff;
+    --cyan-dim: rgba(0, 212, 255, 0.15);
+    --text: #c8d8f0;
+    --text-dim: #5a7299;
+    --low: #44ff88;
+    --medium: #4499ff;
+    --high: #ffaa00;
+    --critical: #ff4444;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    width: 44px;
+    height: 44px;
+    border: 1.5px solid var(--cyan);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(0,212,255,0.2);
+  }
+
+  .logo svg { width: 24px; height: 24px; }
+
+  .header-text h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+
+  .header-text p {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+  }
+
+  .status-dot {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--low);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .status-dot::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--low);
+    box-shadow: 0 0 8px var(--low);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 640px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  .card-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Form fields */
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+  }
+
+  .field select option { background: var(--surface2); }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Analyze button */
+  .btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 13px;
+    background: var(--cyan);
+    color: #0a0f1e;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    text-transform: uppercase;
+  }
+
+  .btn:hover { opacity: 0.9; }
+  .btn:active { transform: scale(0.99); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Result card */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.4s;
+  }
+
+  .result-card.critical { border-color: var(--critical); }
+  .result-card.high { border-color: var(--high); }
+  .result-card.medium { border-color: var(--medium); }
+  .result-card.low { border-color: var(--low); }
+
+  .result-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-body { padding: 24px; flex: 1; }
+
+  /* Idle state */
+  .idle-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 48px 24px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .idle-icon {
+    width: 64px; height: 64px;
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .idle-state p {
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+  }
+
+  /* Scanning state */
+  .scanning-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 48px 24px;
+  }
+
+  .scanner-ring {
+    width: 80px; height: 80px;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .scanning-state p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Risk tier badge */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .tier-badge.critical { background: rgba(255,68,68,0.15); color: var(--critical); border: 1px solid rgba(255,68,68,0.3); }
+  .tier-badge.high { background: rgba(255,170,0,0.15); color: var(--high); border: 1px solid rgba(255,170,0,0.3); }
+  .tier-badge.medium { background: rgba(68,153,255,0.15); color: var(--medium); border: 1px solid rgba(68,153,255,0.3); }
+  .tier-badge.low { background: rgba(68,255,136,0.15); color: var(--low); border: 1px solid rgba(68,255,136,0.3); }
+
+  /* Probability meter */
+  .prob-section { margin: 24px 0; }
+
+  .prob-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+
+  .prob-value {
+    font-size: 48px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .prob-value.critical { color: var(--critical); }
+  .prob-value.high { color: var(--high); }
+  .prob-value.medium { color: var(--medium); }
+  .prob-value.low { color: var(--low); }
+
+  .prob-bar {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .prob-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .prob-fill.critical { background: var(--critical); box-shadow: 0 0 12px var(--critical); }
+  .prob-fill.high { background: var(--high); box-shadow: 0 0 12px var(--high); }
+  .prob-fill.medium { background: var(--medium); box-shadow: 0 0 12px var(--medium); }
+  .prob-fill.low { background: var(--low); box-shadow: 0 0 12px var(--low); }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .stat-box .stat-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .stat-box .stat-val {
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    color: #fff;
+  }
+
+  /* Action banner */
+  .action-banner {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+  }
+
+  .action-banner.critical { background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.2); color: var(--critical); }
+  .action-banner.high { background: rgba(255,170,0,0.08); border: 1px solid rgba(255,170,0,0.2); color: var(--high); }
+  .action-banner.medium { background: rgba(68,153,255,0.08); border: 1px solid rgba(68,153,255,0.2); color: var(--medium); }
+  .action-banner.low { background: rgba(68,255,136,0.08); border: 1px solid rgba(68,255,136,0.2); color: var(--low); }
+
+  /* Error */
+  .error-msg {
+    background: rgba(255,68,68,0.08);
+    border: 1px solid rgba(255,68,68,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--critical);
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const CATEGORIES = [
+  'entertainment','food_dining','gas_transport','grocery_net',
+  'grocery_pos','health_fitness','home','kids_pets',
+  'misc_net','misc_pos','personal_care','shopping_net',
+  'shopping_pos','travel'
+];
+
+const getTierClass = (tier) => {
+  if (!tier) return '';
+  if (tier.includes('Critical')) return 'critical';
+  if (tier.includes('High')) return 'high';
+  if (tier.includes('Medium')) return 'medium';
+  return 'low';
+};
+
+function App() {
+  const [form, setForm] = useState({
+    amt: '850.50', gender: 'M',
+    lat: '36.0788', long: '-81.1781',
+    city_pop: '3495', merch_lat: '40.5',
+    merch_long: '-85.0', category: 'shopping_net',
+    dob: '1988-03-09',
+    trans_date_trans_time: '2024-01-01 02:30:00'
+  });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const set = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));
+
+  const analyze = async () => {
+    setLoading(true); setError(null); setResult(null);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/predict', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          ...form,
+          amt: parseFloat(form.amt),
+          lat: parseFloat(form.lat),
+          long: parseFloat(form.long),
+          city_pop: parseInt(form.city_pop),
+          merch_lat: parseFloat(form.merch_lat),
+          merch_long: parseFloat(form.merch_long),
+        })
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+      setResult(data);
+    } catch(e) {
+      setError(e.message.includes('fetch') 
+        ? 'Cannot reach API — make sure uvicorn is running on port 8000' 
+        : e.message);
+    } finally { setLoading(false); }
+  };
+
+  const tierClass = result ? getTierClass(result.risk_tier) : '';
+
+  return (
+    <div className="app">
+      <header className="header">
+        <div className="logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div className="header-text">
+          <h1>SentinelAI</h1>
+          <p>fraud-detection-ml · v2.0 · XGBoost + FastAPI</p>
+        </div>
+        <div className="status-dot">API ONLINE</div>
+      </header>
+
+      <div className="layout">
+        {/* Left: Form */}
+        <div className="card">
+          <div className="card-label">Transaction Input</div>
+
+          <div className="field">
+            <label>AMOUNT (USD)</label>
+            <input value={form.amt} onChange={set('amt')} placeholder="0.00"/>
+          </div>
+
+          <div className="field">
+            <label>MERCHANT CATEGORY</label>
+            <select value={form.category} onChange={set('category')}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>GENDER</label>
+            <select value={form.gender} onChange={set('gender')}>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>TRANSACTION TIME</label>
+            <input value={form.trans_date_trans_time} onChange={set('trans_date_trans_time')} placeholder="YYYY-MM-DD HH:MM:SS"/>
+          </div>
+
+          <div className="field">
+            <label>DATE OF BIRTH</label>
+            <input value={form.dob} onChange={set('dob')} placeholder="YYYY-MM-DD"/>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>CUSTOMER LAT</label>
+              <input value={form.lat} onChange={set('lat')}/>
+            </div>
+            <div className="field">
+              <label>CUSTOMER LONG</label>
+              <input value={form.long} onChange={set('long')}/>
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>MERCHANT LAT</label>
+              <input value={form.merch_lat} onChange={set('merch_lat')}/>
+            </div>
+            <div className="field">
+              <label>MERCHANT LONG</label>
+              <input value={form.merch_long} onChange={set('merch_long')}/>
+            </div>
+          </div>
+
+          <div className="field">
+            <label>CITY POPULATION</label>
+            <input value={form.city_pop} onChange={set('city_pop')}/>
+          </div>
+
+          <button className="btn" onClick={analyze} disabled={loading}>
+            {loading ? 'ANALYZING...' : '⚡ ANALYZE TRANSACTION'}
+          </button>
+
+          {error && <div className="error-msg">⚠ {error}</div>}
+        </div>
+
+        {/* Right: Result */}
+        <div className={`result-card ${tierClass}`}>
+          <div className="result-header">
+            <div className="card-label">Risk Assessment</div>
+          </div>
+
+          {!result && !loading && (
+            <div className="idle-state">
+              <div className="idle-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e2d50" strokeWidth="1.5">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 8v4M12 16h.01"/>
+                </svg>
+              </div>
+              <p>Enter transaction details<br/>and run analysis to see<br/>the fraud risk assessment.</p>
+            </div>
+          )}
+
+          {loading && (
+            <div className="scanning-state">
+              <div className="scanner-ring"/>
+              <p>SCANNING TRANSACTION...</p>
+            </div>
+          )}
+
+          {result && !loading && (
+            <div className="result-body">
+              <div style={{marginBottom: 20}}>
+                <span className={`tier-badge ${tierClass}`}>
+                  {result.risk_tier}
+                </span>
+              </div>
+
+              <div className="prob-section">
+                <div className="prob-label">
+                  <span>FRAUD PROBABILITY</span>
+                  <span>THRESHOLD: {result.threshold_used}</span>
+                </div>
+                <div className={`prob-value ${tierClass}`}>
+                  {(result.fraud_probability * 100).toFixed(1)}%
+                </div>
+                <div className="prob-bar">
+                  <div
+                    className={`prob-fill ${tierClass}`}
+                    style={{width: `${result.fraud_probability * 100}%`}}
+                  />
+                </div>
+              </div>
+
+              <div className="stats-row">
+                <div className="stat-box">
+                  <div className="stat-label">Decision</div>
+                  <div className="stat-val" style={{color: result.is_fraud ? 'var(--critical)' : 'var(--low)'}}>
+                    {result.is_fraud ? '🚨 FRAUD' : '✅ CLEAN'}
+                  </div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Model</div>
+                  <div className="stat-val">XGBoost</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">CV F1-Score</div>
+                  <div className="stat-val">0.817</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">ROC-AUC</div>
+                  <div className="stat-val">0.998</div>
+                </div>
+              </div>
+
+              <div className={`action-banner ${tierClass}`}>
+                ▸ {result.recommended_action}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
