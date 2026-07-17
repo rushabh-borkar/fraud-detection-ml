@@ -131,6 +131,9 @@ Then visit `http://127.0.0.1:8000/docs` for an interactive Swagger UI to test pr
   "threshold_used": 0.73
 }
 ```
+### 4. Open the UI
+Open `fraud_ui.html` in your browser while uvicorn is running — 
+enter any transaction details and get a real-time fraud risk assessment.
 
 ## Tech Stack
 Python, pandas, NumPy, scikit-learn, XGBoost, FastAPI, uvicorn, matplotlib
