@@ -98,6 +98,14 @@ def predict(transaction: Transaction):
         "risk_tier": risk_tier,
         "recommended_action": action
     }
+    from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
